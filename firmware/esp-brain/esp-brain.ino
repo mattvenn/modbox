@@ -68,6 +68,7 @@ void loop()
           {
             Serial.println("connected to MQTT");
             client.subscribe("/modbox/led"); 
+            client.publish("/modbox/startup", String(millis()));
           }
       }
       // if got an update, publish it

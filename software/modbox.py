@@ -14,33 +14,44 @@ def on_publish(client, userdata, mid):
     print mid
 
 def send_led(led):
-	stat, mid = client.publish("/modbox/led", led, qos=2)
-	if stat != mqtt.MQTT_ERR_SUCCESS:
-	    print("problem sending")
-	else:
-	    print("message %d sent id %d" % (out,mid))
+    stat, mid = client.publish("/modbox/led", led, qos=2)
+    if stat != mqtt.MQTT_ERR_SUCCESS:
+        print("problem sending")
+    else:
+        print("message %d sent id %d" % (out,mid))
+
 
 def on_message(client, userdata, message):
     print("Received message '" + str(message.payload) + "' on topic '"
         + message.topic + "' with QoS " + str(message.qos))
-    if message.payload == '1':
-	send_led(0)
-    if message.payload == '0':
-	send_led(1)
+
+    if message.topic == '/modbox/button':
+        if message.payload == '1':
+            send_led(0)
+            state['led'] = 0
+        if message.payload == '0':
+            send_led(1)
+            state['led'] = 1
+    if message.topic == '/modbox/start':
+        print("startup")
+        send_led(state['led'])
 
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_publish = on_publish
 client.on_message = on_message
 
+# state of the modbox at beginning
+state = { 'led' : 1 }
 
 client.connect("127.0.0.1", 1883, 60)
 time.sleep(0.1)
 client.subscribe("/modbox/button") # subscribe after connect!
+client.subscribe("/modbox/startup") # subscribe after connect!
 client.loop_start()
 
 out = 1
 while True:
-	time.sleep(0.5)
+    time.sleep(0.5)
 
 
