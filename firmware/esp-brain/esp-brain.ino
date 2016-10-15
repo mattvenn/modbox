@@ -6,12 +6,17 @@
 
 IPAddress server(192,168,1,241);
 WiFiClient wclient;
-PubSubClient client(wclient, server);
+PubSubClient client(wclient);
 
-#include "Button.h"
+#include "button.h"
+#define num_objects 2
+Module modules[]= {
+ Button(8, client),
+ Button(9, client),
+};
 
-Button butt(8, client);
-
+//Module * objArray [3];
+  
 //client callback for MQTT subscriptions
 void callback(char* topic, byte* payload, unsigned int length) 
 {
@@ -30,13 +35,16 @@ void callback(char* topic, byte* payload, unsigned int length)
   if(topic == "/modbox/update")
   {
     int id = payload[0];
-    if(butt.get_id() == id)
-        butt.update(payload, length);
+    for(int i = 0; i < num_objects; i++)
+        if(modules[i].get_id() == id)
+            modules[i].update(payload, length);
   }
 }
 
 void setup() 
 {
+//    objArray [0] = new Button(8, client);
+ //   objArray [1] = new Button(9, client);
   Wire.begin(); // join i2c bus (address optional for master)
 //  Wire.setClock(50000);
   Wire.setClockStretchLimit(1500);    // in µs, needed for i2c to work on esp
@@ -48,7 +56,8 @@ void setup()
   Serial.println();
 
   //client callback for MQTT subscriptions
-  client.set_callback(callback);
+  client.setServer(host, 1883);
+  client.setCallback(callback);
 }
 
 void loop() 
@@ -59,7 +68,7 @@ void loop()
     Serial.print("Connecting to ");
     Serial.print(ssid);
     Serial.println("...");
-    WiFi.begin(ssid, pass);
+    WiFi.begin(ssid, password);
 
     if (WiFi.waitForConnectResult() != WL_CONNECTED)
       return;
@@ -77,6 +86,7 @@ void loop()
             client.subscribe("/modbox/mod"); 
           }
       }
+  }
 
       // if got an update, publish it
   /*
@@ -86,8 +96,9 @@ void loop()
             module.publish_change()
   */
 
-  if(butt.changed())
-    butt.publish();
+    for(int i = 0; i < num_objects; i++)
+      if(modules[i].changed())
+        modules[i].publish();
 
   client.loop();
 }
