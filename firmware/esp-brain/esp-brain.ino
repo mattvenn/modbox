@@ -8,25 +8,32 @@ IPAddress server(192,168,1,241);
 WiFiClient wclient;
 PubSubClient client(wclient, server);
 
-char button = 0;
+#include "Button.h"
+
+Button butt(8, client);
 
 //client callback for MQTT subscriptions
-void callback(const MQTT::Publish& pub) {
-  Serial.print(pub.topic());
-  Serial.print("=");
-  Serial.println(pub.payload_string());
-  if(pub.topic() == "/modbox/led")
+void callback(char* topic, byte* payload, unsigned int length) 
+{
+  Serial.print(topic);
+  //register a module
+  /*
+  if(topic == "/modbox/register")
   {
-    int value = pub.payload_string().toInt();
-    //send it on the the led
-      Serial.print("send i2c = ");
-      Serial.println(value);
-      Wire.beginTransmission(8); // transmit to device #8
-      Wire.write(value);       
-      Wire.endTransmission();    // stop transmitting
+    int id = payload[0];
+    char * type = payload[1];
+    if type == knob: 
+        modules = knob(id, client);
+  }
+  */
+  //update a module
+  if(topic == "/modbox/update")
+  {
+    int id = payload[0];
+    if(butt.get_id() == id)
+        butt.update(payload, length);
   }
 }
-
 
 void setup() 
 {
@@ -67,21 +74,20 @@ void loop()
           if (client.connect("modbox"))
           {
             Serial.println("connected to MQTT");
-            client.subscribe("/modbox/led"); 
+            client.subscribe("/modbox/mod"); 
           }
       }
+
       // if got an update, publish it
-  Wire.requestFrom(8, 1); 
-  if (Wire.available() == 1) { // slave may send less than requested
-    char c = Wire.read(); // receive a byte as character
-    if(c != button)
-    {
-        button = c;
-      Serial.print("publish button = ");
-      Serial.println(button, HEX);
-      client.publish("/modbox/button", String(button, HEX));
-      }
-  }
-  }
+  /*
+    for module in modules:
+        module.update()
+        if module.changed():
+            module.publish_change()
+  */
+
+  if(butt.changed())
+    butt.publish();
+
   client.loop();
 }

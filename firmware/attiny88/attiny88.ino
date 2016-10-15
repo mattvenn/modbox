@@ -1,43 +1,28 @@
-#define LED 25 //PA2
-#define BUTTON 12
-
+#include "button.h"
 #include <Wire.h>
+#define ID 8
 
+ButtonHW button(ID);
 
-char button_data = 0;
-void receiveEvent(int howMany) {
-    char c = Wire.read(); // receive byte as a character
-    if(c)
-        digitalWrite(LED, HIGH);
-    else
-        digitalWrite(LED, LOW);
-
+void receive_callback(int len)
+{
+    button.get_msg(len);
 }
 
-void requestEvent() 
+void request_callback()
 {
-    Wire.write(button_data); 
+    button.send_msg();
 }
 
 void setup()
 {
-    pinMode(LED,OUTPUT);
-    digitalWrite(LED, HIGH);
-    delay(100);
-    digitalWrite(LED, LOW);
-
-    pinMode(BUTTON,INPUT);
-    digitalWrite(BUTTON,HIGH);
-
-    Wire.begin(8);                // join i2c bus with address #8
-    Wire.onReceive(receiveEvent); // register event
-    Wire.onRequest(requestEvent); // register event
+    button.setup();
+    Wire.begin(button.get_id());
+    Wire.onRequest(request_callback);
+    Wire.onReceive(receive_callback);
 }
 
 void loop()
 {
-    if(digitalRead(BUTTON) == LOW)
-        button_data = 0x01;
-    else
-        button_data = 0x00;
+    button.update();
 }
