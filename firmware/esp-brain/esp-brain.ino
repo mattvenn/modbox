@@ -10,7 +10,7 @@ PubSubClient client(wclient);
 int num_modules = 0;
 typedef struct {
     int id;
-    String last_msg;
+    char * last_msg;
     int msg_len;
 } MODULE;
 
@@ -23,7 +23,7 @@ void callback(char* topic, byte* payload, unsigned int len)
 {
   Serial.print("topic");
   Serial.println(topic);
-  if(topic == "setmod")
+  if(strcmp(topic,"/modbox/setmod") == 0)
   {
       Serial.print("passing msg through [");
       for(int i = 0; i<len; i++)
@@ -34,17 +34,27 @@ void callback(char* topic, byte* payload, unsigned int len)
       Wire.write(payload, len);
       Wire.endTransmission();
   }
-  if(topic == "register")
+  else if(strcmp(topic, "/modbox/register") == 0)
   {
       // add the module details to the list to check
       if(num_modules >= MAX_MODULES)
         return;
-      Serial.println("registering new module");
+      Serial.println(num_modules);
+      Serial.print("registering new module [");
+      for(int i = 0; i<len; i++)
+          Serial.print(payload[i], HEX);
+      Serial.println("]");
       modules[num_modules].id = payload[0];
+      Serial.println("1");
       modules[num_modules].msg_len = payload[1];
-      modules[num_modules].last_msg = "";
+      Serial.println("2");
+      modules[num_modules].last_msg = (char*)malloc(sizeof(char)*payload[1]);
+      Serial.println("3");
       num_modules++;
+      Serial.println("done");
   }
+  else
+    Serial.println("no handler for that topic");
 }
 
 void setup() 
@@ -92,30 +102,34 @@ void loop()
             Serial.println("connected to MQTT");
             client.subscribe("/modbox/setmod"); 
             client.subscribe("/modbox/register"); 
+            client.publish("/modbox/start", "");
           }
       }
 
+    delay(100);
     for(int i = 0; i < num_modules; i++)
     {
         MODULE mod = modules[i];
         if(mod.msg_len > 0)
         {
+          Serial.print("requesting update from module id:");
+          Serial.println(mod.id);
           Wire.requestFrom(mod.id, mod.msg_len); 
           if(Wire.available() == mod.msg_len)
           {
-              String msg;
+              char * msg = (char*)malloc(sizeof(char)*mod.msg_len);
+              int j = 0;
               while(Wire.available())
-                msg.concat(Wire.read());
+                msg[j++] = Wire.read();
                 
-              if(mod.last_msg != msg)
+              if(strcmp(mod.last_msg,msg) != 0)
               {
                  Serial.print("module changed, sending state [");
                  Serial.print(msg);
                  Serial.println("]");
-                 mod.last_msg = msg;
-                 char msg_str[mod.msg_len];
-                 msg.toCharArray(msg_str, mod.msg_len);
-                 client.publish("/modbox/modchange", msg_str);
+                 for(int j=0; j<mod.msg_len; j++)
+                    mod.last_msg[j] = msg[j];
+                 client.publish("/modbox/modchange", msg);
               }
               else
                 Serial.println("no change in module");
