@@ -1,22 +1,36 @@
+#define ID 1
+#define STATE_MSG_LEN 2
+#define SETMOD_MSG_LEN 2
+
 #define LED 25 //PA2
 #define BUTTON 12
 
 #include <Wire.h>
 
+byte modchange_msg[STATE_MSG_LEN];
+byte setmod_msg[SETMOD_MSG_LEN];
 
-char button_data = 0;
-void receiveEvent(int howMany) {
-    char c = Wire.read(); // receive byte as a character
-    if(c)
+void get_setmod_msg(int len)
+{
+    // test len
+    if(len != SETMOD_MSG_LEN)
+        return;
+    // read the message
+    for(int i=0; i < SETMOD_MSG_LEN; i++)
+        setmod_msg[i] = Wire.read();
+    // check id
+    if(setmod_msg[0] != ID)
+        return;
+    // update module
+    if(setmod_msg[1] == 1)
         digitalWrite(LED, HIGH);
     else
         digitalWrite(LED, LOW);
-
 }
 
-void requestEvent() 
+void send_modchange_msg() 
 {
-    Wire.write(button_data); 
+    Wire.write(modchange_msg, STATE_MSG_LEN); 
 }
 
 void setup()
@@ -29,15 +43,17 @@ void setup()
     pinMode(BUTTON,INPUT);
     digitalWrite(BUTTON,HIGH);
 
-    Wire.begin(8);                // join i2c bus with address #8
-    Wire.onReceive(receiveEvent); // register event
-    Wire.onRequest(requestEvent); // register event
+    Wire.begin(ID);                // join i2c bus with address #8
+    modchange_msg[0] = ID;
+    modchange_msg[1] = 0;
+    Wire.onReceive(get_setmod_msg); // register event
+    Wire.onRequest(send_modchange_msg); // register event
 }
 
 void loop()
 {
     if(digitalRead(BUTTON) == LOW)
-        button_data = 0x01;
+        modchange_msg[1] = 0x01;
     else
-        button_data = 0x00;
+        modchange_msg[1] = 0x00;
 }
