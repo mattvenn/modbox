@@ -1,11 +1,19 @@
 #!/usr/bin/python
-import paho.mqtt.client as mqtt
+#import paho.mqtt.client as mqtt
+import json
 import time
 import sys
+
+with open("config.json") as fh:
+    config = json.load(fh)
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
+    # register modules
+    for module in config:
+        reg_msg = struct.pack("BB", module.id, module.msg_len)
+        stat, mid = client.publish("/modbox/register", reg_msg, qos=2)
 
 def on_publish(client, userdata, mid):
     print("sent to client")
