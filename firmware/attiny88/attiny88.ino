@@ -1,5 +1,5 @@
 #define ID 1
-#define STATE_MSG_LEN 2
+#define MODCHANGE_MSG_LEN 2
 #define SETMOD_MSG_LEN 2
 
 #define LED 25 //PA2
@@ -7,7 +7,7 @@
 
 #include <Wire.h>
 
-byte modchange_msg[STATE_MSG_LEN];
+byte modchange_msg[MODCHANGE_MSG_LEN];
 byte setmod_msg[SETMOD_MSG_LEN];
 
 void get_setmod_msg(int len)
@@ -30,7 +30,7 @@ void get_setmod_msg(int len)
 
 void send_modchange_msg() 
 {
-    Wire.write(modchange_msg, STATE_MSG_LEN); 
+    Wire.write(modchange_msg, MODCHANGE_MSG_LEN); 
 }
 
 void setup()

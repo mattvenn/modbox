@@ -10,8 +10,9 @@ PubSubClient client(wclient);
 int num_modules = 0;
 typedef struct {
     int id;
-    char * last_msg;
-    int msg_len;
+    uint8_t * last_msg;
+    uint8_t * msg;
+    int modchange_msglen;
 } MODULE;
 
 // global list of modules
@@ -45,11 +46,9 @@ void callback(char* topic, byte* payload, unsigned int len)
           Serial.print(payload[i], HEX);
       Serial.println("]");
       modules[num_modules].id = payload[0];
-      Serial.println("1");
-      modules[num_modules].msg_len = payload[1];
-      Serial.println("2");
-      modules[num_modules].last_msg = (char*)malloc(sizeof(char)*payload[1]);
-      Serial.println("3");
+      modules[num_modules].modchange_msglen = payload[1];
+      modules[num_modules].last_msg = (uint8_t*)malloc(sizeof(uint8_t)*payload[1]);
+      modules[num_modules].msg = (uint8_t*)malloc(sizeof(uint8_t)*payload[1]);
       num_modules++;
       Serial.println("done");
   }
@@ -85,7 +84,7 @@ void loop()
     Serial.print("Connecting to ");
     Serial.print(ssid);
     Serial.println("...");
-    WiFi.begin(ssid, password);
+    WiFi.begin(ssid, pass);
 
     if (WiFi.waitForConnectResult() != WL_CONNECTED)
       return;
@@ -106,33 +105,44 @@ void loop()
           }
       }
 
-    delay(100);
     for(int i = 0; i < num_modules; i++)
     {
         MODULE mod = modules[i];
-        if(mod.msg_len > 0)
+        if(mod.modchange_msglen > 0)
         {
-          Serial.print("requesting update from module id:");
-          Serial.println(mod.id);
-          Wire.requestFrom(mod.id, mod.msg_len); 
-          if(Wire.available() == mod.msg_len)
+ //         Serial.print("requesting update from module id:");
+//          Serial.println(mod.id);
+          Wire.requestFrom(mod.id, mod.modchange_msglen); 
+          if(Wire.available() == mod.modchange_msglen)
           {
-              char * msg = (char*)malloc(sizeof(char)*mod.msg_len);
               int j = 0;
-              while(Wire.available())
-                msg[j++] = Wire.read();
-                
-              if(strcmp(mod.last_msg,msg) != 0)
+              while(Wire.available() && j < mod.modchange_msglen)
+                mod.msg[j++] = Wire.read();
+
+              if(j != mod.modchange_msglen)
               {
-                 Serial.print("module changed, sending state [");
-                 Serial.print(msg);
-                 Serial.println("]");
-                 for(int j=0; j<mod.msg_len; j++)
-                    mod.last_msg[j] = msg[j];
-                 client.publish("/modbox/modchange", msg);
+                Serial.print("not enough bytes received: ");
+                Serial.println(j);
+                continue;
+              }
+
+              if(mod.msg[0] != mod.id)
+              {
+                Serial.print("wrong ID received");
+                continue;
+              }
+                
+              if(strncmp((char*)mod.last_msg, (char*)mod.msg, 2) != 0)
+              {
+                 Serial.print("module id ["); Serial.print(mod.id, HEX); Serial.println("] changed");
+                 for(int j=0; j<mod.modchange_msglen; j++)
+                    mod.last_msg[j] = mod.msg[j];
+                 client.publish("/modbox/modchange", mod.msg, mod.modchange_msglen);
               }
               else
-                Serial.println("no change in module");
+              {
+                //Serial.println("no change in module");
+              }
           }
           else
             Serial.println("message timeout");
