@@ -4,7 +4,7 @@
 #include <Ticker.h>
 #include "secrets.h"
 
-IPAddress server(192,168,1,241);
+IPAddress server(192,168,1,106);
 WiFiClient wclient;
 PubSubClient client(wclient, server);
 
