@@ -4,34 +4,62 @@
 #include <Ticker.h>
 #include "secrets.h"
 
-IPAddress server(192,168,1,106);
 WiFiClient wclient;
-PubSubClient client(wclient, server);
+PubSubClient client(wclient);
 
-char button = 0;
+int num_modules = 0;
+typedef struct {
+    int id;
+    uint8_t * last_msg;
+    uint8_t * msg;
+    int modchange_msglen;
+} MODULE;
+
+// global list of modules
+#define MAX_MODULES 50
+MODULE * modules;
 
 //client callback for MQTT subscriptions
-void callback(const MQTT::Publish& pub) {
-  Serial.print(pub.topic());
-  Serial.print("=");
-  Serial.println(pub.payload_string());
-  if(pub.topic() == "/modbox/led")
+void callback(char* topic, byte* payload, unsigned int len) 
+{
+  Serial.print("topic");
+  Serial.println(topic);
+  if(strcmp(topic,"/modbox/setmod") == 0)
   {
-    int value = pub.payload_string().toInt();
-    //send it on the the led
-      Serial.print("send i2c = ");
-      Serial.println(value);
-      Wire.beginTransmission(8); // transmit to device #8
-      Wire.write(value);       
-      Wire.endTransmission();    // stop transmitting
+      Serial.print("passing msg through [");
+      for(int i = 0; i<len; i++)
+          Serial.print(payload[i], HEX);
+      Serial.println("]");
+      // pass messages straight through to the module
+      Wire.beginTransmission(payload[0]);
+      Wire.write(payload, len);
+      Wire.endTransmission();
   }
+  else if(strcmp(topic, "/modbox/register") == 0)
+  {
+      // add the module details to the list to check
+      if(num_modules >= MAX_MODULES)
+        return;
+      Serial.println(num_modules);
+      Serial.print("registering new module [");
+      for(int i = 0; i<len; i++)
+          Serial.print(payload[i], HEX);
+      Serial.println("]");
+      modules[num_modules].id = payload[0];
+      modules[num_modules].modchange_msglen = payload[1];
+      modules[num_modules].last_msg = (uint8_t*)malloc(sizeof(uint8_t)*payload[1]);
+      modules[num_modules].msg = (uint8_t*)malloc(sizeof(uint8_t)*payload[1]);
+      num_modules++;
+      Serial.println("done");
+  }
+  else
+    Serial.println("no handler for that topic");
 }
-
 
 void setup() 
 {
   Wire.begin(); // join i2c bus (address optional for master)
-//  Wire.setClock(50000);
+  //  Wire.setClock(50000);
   Wire.setClockStretchLimit(1500);    // in µs, needed for i2c to work on esp
 
   WiFi.mode(WIFI_STA);
@@ -40,8 +68,12 @@ void setup()
   Serial.println();
   Serial.println();
 
-  //client callback for MQTT subscriptions
-  client.set_callback(callback);
+  // allocate memory for modules
+  modules = (MODULE*)malloc(MAX_MODULES * sizeof(MODULE));
+
+  // client callback for MQTT subscriptions
+  client.setCallback(callback);
+  client.setServer(host, 1883);
 }
 
 void loop() 
@@ -67,22 +99,55 @@ void loop()
           if (client.connect("modbox"))
           {
             Serial.println("connected to MQTT");
-            client.subscribe("/modbox/led"); 
-            client.publish("/modbox/startup", String(millis()));
+            client.subscribe("/modbox/setmod"); 
+            client.subscribe("/modbox/register"); 
+            client.publish("/modbox/start", "");
           }
       }
-      // if got an update, publish it
-  Wire.requestFrom(8, 1); 
-  if (Wire.available() == 1) { // slave may send less than requested
-    char c = Wire.read(); // receive a byte as character
-    if(c != button)
+
+    for(int i = 0; i < num_modules; i++)
     {
-        button = c;
-      Serial.print("publish button = ");
-      Serial.println(button, HEX);
-      client.publish("/modbox/button", String(button, HEX));
-      }
-  }
+        MODULE mod = modules[i];
+        if(mod.modchange_msglen > 0)
+        {
+ //         Serial.print("requesting update from module id:");
+//          Serial.println(mod.id);
+          Wire.requestFrom(mod.id, mod.modchange_msglen); 
+          if(Wire.available() == mod.modchange_msglen)
+          {
+              int j = 0;
+              while(Wire.available() && j < mod.modchange_msglen)
+                mod.msg[j++] = Wire.read();
+
+              if(j != mod.modchange_msglen)
+              {
+                Serial.print("not enough bytes received: ");
+                Serial.println(j);
+                continue;
+              }
+
+              if(mod.msg[0] != mod.id)
+              {
+                Serial.print("wrong ID received");
+                continue;
+              }
+                
+              if(strncmp((char*)mod.last_msg, (char*)mod.msg, 2) != 0)
+              {
+                 Serial.print("module id ["); Serial.print(mod.id, HEX); Serial.println("] changed");
+                 for(int j=0; j<mod.modchange_msglen; j++)
+                    mod.last_msg[j] = mod.msg[j];
+                 client.publish("/modbox/modchange", mod.msg, mod.modchange_msglen);
+              }
+              else
+              {
+                //Serial.println("no change in module");
+              }
+          }
+          else
+            Serial.println("message timeout");
+        }
+    }
   }
   client.loop();
 }
