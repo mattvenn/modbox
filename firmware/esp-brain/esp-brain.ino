@@ -132,11 +132,15 @@ void loop()
                 continue;
               }
                 
-              if(strncmp((char*)mod.last_msg, (char*)mod.msg, 2) != 0)
+              if(strncmp((char*)mod.last_msg, (char*)mod.msg, mod.modchange_msglen) != 0)
               {
-                 Serial.print("module id ["); Serial.print(mod.id, HEX); Serial.println("] changed");
+                 Serial.print("module id ["); Serial.print(mod.id, HEX); Serial.print("] changed ["); 
                  for(int j=0; j<mod.modchange_msglen; j++)
+                 {
                     mod.last_msg[j] = mod.msg[j];
+                    Serial.print(mod.msg[j], HEX);
+                 }
+                 Serial.println("]");
                  client.publish("/modbox/modchange", mod.msg, mod.modchange_msglen);
               }
               else

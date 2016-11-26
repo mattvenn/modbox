@@ -45,3 +45,23 @@ class Button(Module):
             self.send_setmod(struct.pack("<BB", but_id, 0));
         else:
             self.send_setmod(struct.pack("<BB", but_id, 1));
+
+class Knobs(Module):
+    def get_modchange_msglen(self):
+        return 4
+
+    def action(self, modchange_msg):
+        # this should be in the base class
+        if len(modchange_msg) != self.get_modchange_msglen():
+            print("wrong length message, got %d, expected %d" % (len(modchange_msg), self.get_modchange_msglen()))
+            return
+        knob_id, knob1, knob2, buttons = struct.unpack("<BBBB", modchange_msg)
+        but1, but2 = False, False
+        if buttons & 1:
+            but1 = True
+        if buttons & 2:
+            but2 = True
+        print("button id %d updated %d %d %d %d" % (knob_id, knob1, knob2, but1, but2))
+        setmod_msg = struct.pack("<BBBB", knob_id, knob1, knob2, buttons);
+        # bytearray forces mqtt to treat as data not strings. this should be in base class
+        self.send_setmod(bytearray(setmod_msg))
