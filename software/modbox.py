@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import paho.mqtt.client as mqtt
-from modules import Button
+from modules import Button, Knobs
 import struct
 import json
 import time
@@ -46,7 +46,7 @@ client.on_message = on_message
 modules = []
 for module in config:
     if module['type'] == 'button':
-        modules.append(Button(module['id'], client))
+        modules.append(Knobs(module['id'], client))
 
 client.connect("127.0.0.1", 1883, 60)
 time.sleep(0.1)
