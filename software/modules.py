@@ -24,7 +24,7 @@ class Module(object):
         stat, mid = self.mqtt_client.publish("/modbox/register", reg_msg, qos=2)
 
     def send_setmod(self, msg):
-        stat, mid = self.mqtt_client.publish("/modbox/setmod", msg, qos=2)
+        stat, mid = self.mqtt_client.publish("/modbox/setmod", msg, qos=0)
         if stat != mqtt.MQTT_ERR_SUCCESS:
             print("problem sending")
         else:
@@ -65,3 +65,18 @@ class Knobs(Module):
         setmod_msg = struct.pack("<BBBB", knob_id, knob1, knob2, buttons);
         # bytearray forces mqtt to treat as data not strings. this should be in base class
         self.send_setmod(bytearray(setmod_msg))
+
+        """if knob1 % 4 == 0:
+            lcd_id = 2
+            lcd_msg = "knob 1 + 2 = %d" % (knob1 + knob2)
+            setmod_msg = struct.pack("<BB16s", lcd_id, 0, lcd_msg.ljust(16))
+            self.send_setmod(bytearray(setmod_msg))
+            """
+
+
+class LCD(Module):
+    def get_modchange_msglen(self):
+        return 0
+
+    def action(self, modchange_msg):
+        pass
