@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import paho.mqtt.client as mqtt
-from modules import Button, Knobs
+from modules import Button, Knobs, LCD
 import struct
 import json
 import time
@@ -14,7 +14,7 @@ def on_publish(client, userdata, mid):
     print("sent msg id %s to client" % (mid))
 
 def on_message(client, userdata, message):
-    print("Received message on topic '" + message.topic)
+    print("Received message on topic " + message.topic)
     if message.topic == '/modbox/start':
         for module in modules:
             module.register()
@@ -46,13 +46,20 @@ client.on_message = on_message
 modules = []
 for module in config:
     if module['type'] == 'button':
+        modules.append(Button(module['id'], client))
+    elif module['type'] == 'knobs':
         modules.append(Knobs(module['id'], client))
+    elif module['type'] == 'lcd':
+        modules.append(LCD(module['id'], client))
 
 client.connect("127.0.0.1", 1883, 60)
 time.sleep(0.1)
 client.subscribe("/modbox/start")  # when modbox starts, this will cause all modules to be registered
 client.subscribe("/modbox/modchange") # whenever a control changes
 client.loop_start()
+
+# force a reset
+client.publish("/modbox/reset", "", qos=2)
 
 while True:
 	time.sleep(0.5)

@@ -1,6 +1,10 @@
 [
     {
-        "type": "button",
+        "type": "knobs",
         "id": 1
+    },
+    {
+        "type": "lcd",
+        "id": 2
     }
 ]

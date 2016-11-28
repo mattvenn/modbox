@@ -118,8 +118,12 @@ void setup()
 
     // join i2c bus
     Wire.begin(ID);
+
+    // initialise msg buffer
     modchange_msg[0] = ID;
-    modchange_msg[1] = 0;
+    for(int i = 1; i < MODCHANGE_MSG_LEN; i ++)
+        modchange_msg[i] = 0;
+
     Wire.onReceive(get_setmod_msg);
     Wire.onRequest(send_modchange_msg);
 }
@@ -152,7 +156,7 @@ void loop()
  
     lastEncoded_1 = encoded; //store this value for next time
 
-    modchange_msg[1] = encoderValue_1;
+    modchange_msg[1] = (byte)encoderValue_1;
 
     MSB = digitalRead(enc2_a); //MSB = most significant bit
     LSB = digitalRead(enc2_b); //LSB = least significant bit
@@ -167,5 +171,5 @@ void loop()
  
     lastEncoded_2 = encoded; //store this value for next time
 
-    modchange_msg[2] = encoderValue_2;
+    modchange_msg[2] = (byte)encoderValue_2;
 }
