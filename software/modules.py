@@ -66,12 +66,11 @@ class Knobs(Module):
         # bytearray forces mqtt to treat as data not strings. this should be in base class
         self.send_setmod(bytearray(setmod_msg))
 
-        """if knob1 % 4 == 0:
+        if knob1 % 4 == 0:
             lcd_id = 2
             lcd_msg = "knob 1 + 2 = %d" % (knob1 + knob2)
             setmod_msg = struct.pack("<BB16s", lcd_id, 0, lcd_msg.ljust(16))
             self.send_setmod(bytearray(setmod_msg))
-            """
 
 
 class LCD(Module):
