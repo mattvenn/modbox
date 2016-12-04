@@ -34,9 +34,11 @@ MODULE * modules;
 
 #define TICK 1000
 unsigned long last_tick = 0;
+#define I2C_CHECK 10
+unsigned long last_i2c_check = 0;
 
-//#define DEBUG_MQTT
-//#define DEBUG_I2C
+#define DEBUG_MQTT
+#define DEBUG_I2C
 
 //client callback for MQTT subscriptions
 void callback(char* topic, byte* payload, unsigned int len) 
@@ -95,7 +97,7 @@ void callback(char* topic, byte* payload, unsigned int len)
 void setup() 
 {
   Wire.begin(); // join i2c bus (address optional for master)
-  Wire.setClock(100000);
+  Wire.setClock(50000);
   Wire.setClockStretchLimit(2000);    // in µs, needed for i2c to work between esp & tiny
 
   WiFi.mode(WIFI_STA);
@@ -147,7 +149,9 @@ void loop()
           }
       }
 
-    // TODO think this is interfering with the callback now the messagse are long enough. need to be interruptible or the callback needs to wait
+    if(millis() - I2C_CHECK > last_i2c_check)
+    {
+        last_i2c_check = millis();
     for(int i = 0; i < num_modules; i++)
     {
         MODULE mod = modules[i];
@@ -156,7 +160,7 @@ void loop()
  //         Serial.print("requesting update from module id:");
 //          Serial.println(mod.id);
           Wire.requestFrom(mod.id, mod.modchange_msglen); 
-          delay(1);
+          delay(1); // also opportunity for esp to catch up on wifi
           if(Wire.available())
           {
               int j = 0;
@@ -219,11 +223,8 @@ void loop()
             Serial.println("message timeout");
         }
     }
-    // delay between talking to modules
-    //delay(1);
-    client.loop();
+    }
   }
-  //client.loop();
   // putting this in seems to solve the errors on i2c
-  delay(10);
+    client.loop();
 }
