@@ -34,11 +34,18 @@ MODULE * modules;
 
 #define TICK 1000
 unsigned long last_tick = 0;
-#define I2C_CHECK 10
+#define I2C_CHECK 20
 unsigned long last_i2c_check = 0;
 
 #define DEBUG_MQTT
 #define DEBUG_I2C
+
+const int button_led = 15;
+const int usb_on = 14;
+const int button = 16;
+const int power_on = 13;
+const int i2c_bus_power = 12;
+const int ADC = A0;
 
 //client callback for MQTT subscriptions
 void callback(char* topic, byte* payload, unsigned int len) 
@@ -96,6 +103,16 @@ void callback(char* topic, byte* payload, unsigned int len)
 
 void setup() 
 {
+    pinMode(power_on, OUTPUT);
+    digitalWrite(power_on, true);
+
+    pinMode(i2c_bus_power, OUTPUT);
+    digitalWrite(i2c_bus_power, true); // low to power on
+
+    pinMode(button_led, OUTPUT);
+    pinMode(usb_on, INPUT);
+    pinMode(button, INPUT);
+
   Wire.begin(); // join i2c bus (address optional for master)
   Wire.setClock(50000);
   Wire.setClockStretchLimit(2000);    // in µs, needed for i2c to work between esp & tiny
@@ -112,14 +129,26 @@ void setup()
   // client callback for MQTT subscriptions
   client.setCallback(callback);
   client.setServer(host, 1883);
+
+    Serial.print("i2c bus...");
+    digitalWrite(i2c_bus_power, false); // low to power on
+    Serial.println("on");
 }
 
 void loop() 
 {
+    /* shutdown code
+    if(loops > 10)
+        if(digitalRead(usb_on) == false) // powered from battery
+            digitalWrite(power_on, false);
+    */
   if(millis() - last_tick > TICK)
   {
     Serial.println(last_tick);
     last_tick = millis();
+    Serial.print("adc=");
+    Serial.println(analogRead(ADC));
+    Serial.println(client.connected());
   }
   if (WiFi.status() != WL_CONNECTED) 
   {
@@ -133,6 +162,7 @@ void loop()
       return;
     Serial.println("WiFi connected");
     WiFi.mode(WIFI_STA);
+    Serial.println(host);
   }
   else if(WiFi.status() == WL_CONNECTED) 
   {
