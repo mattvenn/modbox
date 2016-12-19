@@ -5,16 +5,33 @@ import struct
 import json
 import time
 import sys
+from initial_state import initial_state
+from store import store
+from actions import actions
+from functools import partial
 
+import logging
+
+log_format = logging.Formatter('%(asctime)s - %(name)-16s - %(levelname)-8s - %(message)s')
+# configure the client logging
+log = logging.getLogger('')
+# has to be set to debug as is the root logger
+log.setLevel(logging.DEBUG)
+
+# create console handler and set level to info
+ch = logging.StreamHandler()
+# create formatter for console
+ch.setFormatter(log_format)
+log.addHandler(ch)
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    log.info("Connected with result code "+str(rc))
 
 def on_publish(client, userdata, mid):
-    print("sent msg id %s to client" % (mid))
+    log.debug("sent msg id %s to client" % (mid))
 
 def on_message(client, userdata, message):
-    print("Received message on topic " + message.topic)
+    log.debug("Received message on topic " + message.topic)
     if message.topic == '/modbox/start':
         for module in modules:
             module.register()
@@ -22,7 +39,7 @@ def on_message(client, userdata, message):
             module.post_register()
 
     elif message.topic == '/modbox/modchange':
-        print("mod change message")
+        log.debug("mod change message")
         # get the id
         mod_id, = struct.unpack("<B", message.payload[0])
         # find the right module
@@ -62,6 +79,20 @@ client.loop_start()
 
 # force a reset
 client.publish("/modbox/reset", "", qos=2)
+
+display = ['','']
+def handle_changes():
+    state = store.get_state()
+
+    if state['display'][0] != display[0]:
+        display[0] = state['display'][0]
+        modules[1].update(state['display'][0],0)
+    if state['display'][1] != display[1]:
+        display[1] = state['display'][1]
+        modules[1].update(state['display'][1],1)
+
+store.dispatch(actions.init(initial_state))
+store.subscribe(partial(handle_changes))
 
 while True:
 	time.sleep(0.5)
