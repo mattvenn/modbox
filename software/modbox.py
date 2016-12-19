@@ -18,6 +18,8 @@ def on_message(client, userdata, message):
     if message.topic == '/modbox/start':
         for module in modules:
             module.register()
+        for module in modules:
+            module.post_register()
 
     elif message.topic == '/modbox/modchange':
         print("mod change message")
