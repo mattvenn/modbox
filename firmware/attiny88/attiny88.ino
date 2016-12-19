@@ -14,11 +14,11 @@
 // 0
 const int knob1_sw_led = 25;
 // 1 -> 7
-const int knob1_leds[7] = {8, 7, 6, 5, 15, 14, 26};
+const int knob1_leds[7] = {26, 14, 15, 5, 6, 7, 8};
 // 8
 const int knob2_sw_led = 23;
 // 9 -> 15
-const int knob2_leds[7] = {2, 20, 19, 18, 17, 24, 16};
+const int knob2_leds[7] = {16, 24, 17, 18, 19, 20, 2};
 
 const int led_pwm = 9;
 
