@@ -67,6 +67,9 @@ class Knobs(Module):
     def post_register(self):
         self.last_knob1 = 0
         self.last_knob2 = 0
+        self.last_but1 = False
+        self.last_but2 = False
+
 
     def action(self, modchange_msg):
         # this should be in the base class
@@ -82,18 +85,27 @@ class Knobs(Module):
         if buttons & 2:
             but2 = True
 
+        if but1 == False and but1 != self.last_but1:
+            store.dispatch(actions.but1_release())
+        if but2 == False and but2 != self.last_but2:
+            store.dispatch(actions.but2_release())
+            
+
         if knob1 > self.last_knob1:
-            store.dispatch(partial(actions.change_knob_1,1)())
+            store.dispatch(partial(actions.change_knob1,1)())
         elif knob1 < self.last_knob1:
-            store.dispatch(partial(actions.change_knob_1,-1)())
+            store.dispatch(partial(actions.change_knob1,-1)())
 
         if knob2 > self.last_knob2:
-            store.dispatch(partial(actions.change_knob_2,1)())
+            store.dispatch(partial(actions.change_knob2,1)())
         elif knob2 < self.last_knob2:
-            store.dispatch(partial(actions.change_knob_2,-1)())
+            store.dispatch(partial(actions.change_knob2,-1)())
 
         self.last_knob1 = knob1
         self.last_knob2 = knob2
+
+        self.last_but1 = but1
+        self.last_but2 = but2
         """
             '>' : actions.next_page,
             '<' : actions.previous_page,

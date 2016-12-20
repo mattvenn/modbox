@@ -4,11 +4,14 @@ import pickle
 import logging
 log = logging.getLogger(__name__)
 
+mainmenu_items = [ 'volume', 'playback', 'random album', 'fip']
+playback_items = ['start', 'stop']
 
 initial_state = frozendict({
     'volume' : 0,
-    'disp' : 0,
-    'location' : 'volume',
+    'mainmenu_id' : 0,
+    'playback_menu_id' : 0,
+    'change_playback' : False,
     'display' : ['modbox', ''],
 })
 

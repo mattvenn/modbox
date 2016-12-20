@@ -83,6 +83,7 @@ client.publish("/modbox/reset", "", qos=2)
 display = ['','']
 def handle_changes():
     state = store.get_state()
+    print state
 
     if state['display'][0] != display[0]:
         display[0] = state['display'][0]
