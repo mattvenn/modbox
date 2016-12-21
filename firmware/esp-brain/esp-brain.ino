@@ -1,4 +1,8 @@
 /*
+
+new features
++ wifi status on led
+
 current issues
 
 message timeouts if knobs turned too fast, reset lcd fixes but lcd stays running even when message timeouts are ahppening
@@ -32,7 +36,8 @@ typedef struct {
 #define MAX_MODULES 50
 MODULE * modules;
 
-#define TICK 1000
+#define TICK 5000
+#define SHUTDOWN 10000
 unsigned long last_tick = 0;
 #define I2C_CHECK 20
 unsigned long last_i2c_check = 0;
@@ -47,9 +52,13 @@ const int power_on = 13;
 const int i2c_bus_power = 12;
 const int ADC = A0;
 
+char message_buff[100];
+double last_updated = 0;
+
 //client callback for MQTT subscriptions
 void callback(char* topic, byte* payload, unsigned int len) 
 {
+  digitalWrite(button_led, false);
   #ifdef DEBUG_MQTT
   Serial.print("topic");
   Serial.println(topic);
@@ -99,6 +108,8 @@ void callback(char* topic, byte* payload, unsigned int len)
   }
   else
     Serial.println("no handler for that topic");
+  digitalWrite(button_led, true);
+//  last_updated = millis(); // TODO fix server unnecessary updates
 }
 
 void setup() 
@@ -135,20 +146,31 @@ void setup()
     Serial.println("on");
 }
 
+
 void loop() 
 {
-    /* shutdown code
-    if(loops > 10)
-        if(digitalRead(usb_on) == false) // powered from battery
+    /* shutdown code */
+    if(digitalRead(usb_on) == false) // powered from battery
+        if(millis() - last_updated > SHUTDOWN)
+        {
+            Serial.println("shutdown");
             digitalWrite(power_on, false);
-    */
+        }
+
   if(millis() - last_tick > TICK)
   {
-    Serial.println(last_tick);
+    Serial.println(millis() - last_updated);
+    Serial.println(digitalRead(usb_on));
     last_tick = millis();
+    /*
     Serial.print("adc=");
     Serial.println(analogRead(ADC));
     Serial.println(client.connected());
+    */
+
+    String pubString = String(analogRead(ADC));
+    pubString.toCharArray(message_buff, pubString.length()+1);
+    client.publish("/modbox/battery", message_buff);
   }
   if (WiFi.status() != WL_CONNECTED) 
   {
@@ -158,8 +180,14 @@ void loop()
     Serial.println("...");
     WiFi.begin(ssid, pass);
 
-    if (WiFi.waitForConnectResult() != WL_CONNECTED)
-      return;
+    while (WiFi.status() != WL_CONNECTED) 
+    {
+       delay(50);
+       digitalWrite(button_led, false);
+       delay(50);
+       digitalWrite(button_led, true);
+    }
+
     Serial.println("WiFi connected");
     WiFi.mode(WIFI_STA);
     Serial.println(host);
@@ -242,7 +270,10 @@ void loop()
                  #ifdef DEBUG_I2C
                  Serial.println("]");
                  #endif
+                 digitalWrite(button_led, false);
                  client.publish("/modbox/modchange", mod.msg, mod.modchange_msglen);
+                 digitalWrite(button_led, true);
+                 last_updated = millis();
               }
               else
               {
