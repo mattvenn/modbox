@@ -10,7 +10,9 @@ playback_items = ['start', 'stop']
 initial_state = frozendict({
     'volume' : 0,
     'mainmenu_id' : 0,
+    'mainmenu_knob' : 0,
     'playback_menu_id' : 0,
+    'playback_menu_knob' : 0,
     'change_playback' : False,
     'display' : ['modbox', ''],
 })

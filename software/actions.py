@@ -13,6 +13,15 @@ def display_vol(volume):
 def display_playback_opts(playback_menu_id):
     return playback_items[playback_menu_id]
 
+def reduce_knob(knob, options, reducer=10):
+    if knob < 0:
+        knob = (reducer * len(options) - 1)
+    elif knob > (reducer * len(options) - 1):
+        knob = 0
+    
+    reduced = knob // reducer 
+    return knob, reduced
+
 class Reducers():
     def init(self, _, state):
         return state
@@ -36,14 +45,10 @@ class Reducers():
             return state.copy(display = display)
 
     def change_knob1(self, state, value):
-        mainmenu_id = state['mainmenu_id'] + value
+        mainmenu_knob, mainmenu_id = reduce_knob(state['mainmenu_knob'] + value, mainmenu_items)
 
-        if mainmenu_id < 0:
-            mainmenu_id = len(mainmenu_items) - 1
-        elif mainmenu_id > len(mainmenu_items) - 1:
-            mainmenu_id = 0
 
-        display = ["%d %s" % (mainmenu_id, mainmenu_items[mainmenu_id]), '']
+        display = ["%s" % (mainmenu_items[mainmenu_id]), '']
 
         if mainmenu_id == mainmenu_items.index('playback'):
             display[1] = display_playback_opts(state['playback_menu_id'])
@@ -51,7 +56,7 @@ class Reducers():
         elif mainmenu_id == mainmenu_items.index('volume'):
             display[1] = display_vol(state['volume'])
 
-        return state.copy(display = display, mainmenu_id = mainmenu_id)
+        return state.copy(display = display, mainmenu_id = mainmenu_id, mainmenu_knob = mainmenu_knob)
     """
         if value > 0:
             log.debug("vol mode")
@@ -76,14 +81,9 @@ class Reducers():
             display = [state['display'][0], display_vol(volume)]
             return state.copy(volume = volume, display = display)
         if state['mainmenu_id'] == mainmenu_items.index('playback'): 
-            playback_menu_id = state['playback_menu_id'] + value 
-            if playback_menu_id > len(playback_items) - 1:
-                playback_menu_id = 0
-            elif playback_menu_id < 0:
-                playback_menu_id = len(playback_items) - 1
-
+            playback_menu_knob, playback_menu_id = reduce_knob(state['playback_menu_knob'] + value, playback_items)
             display = [state['display'][0], display_playback_opts(playback_menu_id)]
-            return state.copy(display = display, playback_menu_id = playback_menu_id)
+            return state.copy(display = display, playback_menu_knob = playback_menu_knob, playback_menu_id = playback_menu_id)
         return state
 
 def make_action_method(name):
