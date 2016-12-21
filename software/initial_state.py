@@ -4,7 +4,7 @@ import pickle
 import logging
 log = logging.getLogger(__name__)
 
-mainmenu_items = [ 'volume', 'playback', 'add']
+mainmenu_items = [ 'volume', 'playback', 'add', 'battery']
 addmenu_items = ['fip', 'random album', 'cadena ser']
 playback_items = ['play', 'stop', 'clear', 'skip']
 
@@ -25,6 +25,7 @@ initial_state = frozendict({
     'knob2_leds' : 0,
     'but1_led' : 0,
     'but2_led' : 0,
+    'battery' : 0,
 })
 
 state_file = 'state.pkl'

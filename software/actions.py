@@ -41,6 +41,10 @@ class Reducers():
     def init(self, _, state):
         return state
 
+    def update_battery(self, state, value):
+        log.debug("battery = %s" % value)
+        return state.copy(battery = value)
+
     def change_playback(self, state, value):
         # how to do async stuff?
         log.info("playback changed")
@@ -51,11 +55,13 @@ class Reducers():
         return state
 
     def but2_press(self, state, value):
+        """
         if state['mainmenu_id'] == mainmenu_items.index('playback'):
             but2_led = False
         if state['mainmenu_id'] == mainmenu_items.index('add'):
             but2_led = False
-        return state.copy(but2_led = but2_led)
+        """
+        return state.copy(but2_led = False)
 
     def but1_release(self, state, value):
         return state
@@ -93,6 +99,9 @@ class Reducers():
             display[1] = display_add_opts(state['add_menu_id'])
             knob2_leds = get_bar(10 * state['add_menu_id'], 10 * len(addmenu_items), fill=False)
             but2_led = True
+
+        elif mainmenu_id == mainmenu_items.index('battery'):
+            display[1] = "ADC = %s" % state['battery']
 
         return state.copy(display = display, mainmenu_id = mainmenu_id, mainmenu_knob = mainmenu_knob, knob1_leds = knob1_leds, knob2_leds = knob2_leds, but2_led = but2_led)
             

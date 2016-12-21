@@ -37,7 +37,9 @@ def on_message(client, userdata, message):
             module.register()
         for module in modules:
             module.post_register()
-        handle_changes()
+        handle_changes(force_update=True)
+        # TODO needs 2
+        handle_changes(force_update=True)
 
     elif message.topic == '/modbox/modchange':
         log.debug("mod change message")
@@ -50,6 +52,8 @@ def on_message(client, userdata, message):
                 break
         else:
             print("no module with that id")
+    elif message.topic == '/modbox/battery':
+        store.dispatch(actions.update_battery(message.payload))
     else:
         print("no handler for that topic")
 
@@ -76,25 +80,27 @@ client.connect("127.0.0.1", 1883, 60)
 time.sleep(0.1)
 client.subscribe("/modbox/start")  # when modbox starts, this will cause all modules to be registered
 client.subscribe("/modbox/modchange") # whenever a control changes
+client.subscribe("/modbox/battery") # whenever a control changes
 client.loop_start()
 
 # force a reset
 client.publish("/modbox/reset", "", qos=2)
 
 display = ['','']
-def handle_changes():
+def handle_changes(force_update = False):
     state = store.get_state()
     log.debug(state)
 
-    if state['display'][0] != display[0]:
+    if state['display'][0] != display[0] or force_update:
         lcd_updated = True
         display[0] = state['display'][0]
         modules[1].update(state['display'][0],0)
 
     # hack because 2 consecutive lcd messages can break screen
+    # should only do this if state actually changed
     modules[0].update(state['knob1_leds'], state['knob2_leds'], state['but1_led'], state['but2_led'])
 
-    if state['display'][1] != display[1]:
+    if state['display'][1] != display[1] or force_update:
         display[1] = state['display'][1]
         modules[1].update(state['display'][1],1)
     initial_state.write(state)

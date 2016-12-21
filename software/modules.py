@@ -138,6 +138,7 @@ class LCD(Module):
         return 0
 
     def update(self, lcd_msg, row=0):
+        log.debug("updating lcd row %d with %s" % (row, lcd_msg))
         setmod_msg = struct.pack("<BB16s", self.id, row, lcd_msg.ljust(16))
         self.send_setmod(bytearray(setmod_msg))
 
