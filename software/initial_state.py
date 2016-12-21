@@ -5,7 +5,7 @@ import logging
 log = logging.getLogger(__name__)
 
 mainmenu_items = [ 'volume', 'playback', 'random album', 'fip']
-playback_items = ['start', 'stop']
+playback_items = ['play', 'stop', 'clear', 'skip']
 
 initial_state = frozendict({
     'volume' : 0,
@@ -15,9 +15,12 @@ initial_state = frozendict({
     'playback_menu_knob' : 0,
     'change_playback' : False,
     'display' : ['modbox', ''],
+    'knob1_leds' : 0,
+    'knob2_leds' : 0,
+    'but1_led' : 0,
+    'but2_led' : 0,
 })
 
-"""
 state_file = 'state.pkl'
 
 def read():
@@ -33,15 +36,5 @@ def read():
 
 def write(state):
     log.debug('writing state file')
-    write_state                      = dict(state)
-    write_state['library']           = state['library'].copy(page = 0)
-    location = state['location']
-    if location == 'menu':
-        location = 'library'
-    write_state['location']          = location
-    write_state['backing_up_log']    = False
-    write_state['replacing_library'] = False
-    write_state['shutting_down']     = False
     with open(state_file, 'w') as fh:
-        pickle.dump(frozendict(write_state), fh)
-"""
+        pickle.dump(state, fh)

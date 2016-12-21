@@ -7,13 +7,6 @@ from functools import partial
 import logging
 log = logging.getLogger(__name__)
 
-def num_to_bar(num, maxn=255, num_leds=7):
-    div = float(maxn / num_leds)
-    bit = num / div
-    if bit > num_leds - 1:
-        bit = num_leds - 1
-    return 1 << int(bit)
-
 class Module(object):
     __metaclass__ = abc.ABCMeta
     def __init__(self, id, mqtt_client):
@@ -85,6 +78,11 @@ class Knobs(Module):
         if buttons & 2:
             but2 = True
 
+        if but1 == True and but1 != self.last_but1:
+            store.dispatch(actions.but1_press())
+        if but2 == True and but2 != self.last_but2:
+            store.dispatch(actions.but2_press())
+
         if but1 == False and but1 != self.last_but1:
             store.dispatch(actions.but1_release())
         if but2 == False and but2 != self.last_but2:
@@ -124,6 +122,15 @@ class Knobs(Module):
             self.send_setmod(bytearray(setmod_msg))
         """
 
+    def update(self, knob1, knob2, but1, but2):
+        buttons = 0
+        if but1:
+            buttons += 1
+        if but2:
+            buttons += 2
+        setmod_msg = struct.pack("<BBBB", self.id, knob1, knob2, buttons);
+        # bytearray forces mqtt to treat as data not strings. this should be in base class
+        self.send_setmod(bytearray(setmod_msg))
 
 class LCD(Module):
 #    def __init__(self, id, mqtt_client):

@@ -5,7 +5,7 @@ import struct
 import json
 import time
 import sys
-from initial_state import initial_state
+import initial_state #import read, write
 from store import store
 from actions import actions
 from functools import partial
@@ -16,7 +16,7 @@ log_format = logging.Formatter('%(asctime)s - %(name)-16s - %(levelname)-8s - %(
 # configure the client logging
 log = logging.getLogger('')
 # has to be set to debug as is the root logger
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 # create console handler and set level to info
 ch = logging.StreamHandler()
@@ -37,6 +37,7 @@ def on_message(client, userdata, message):
             module.register()
         for module in modules:
             module.post_register()
+        handle_changes()
 
     elif message.topic == '/modbox/modchange':
         log.debug("mod change message")
@@ -83,16 +84,22 @@ client.publish("/modbox/reset", "", qos=2)
 display = ['','']
 def handle_changes():
     state = store.get_state()
-    print state
+    log.debug(state)
 
     if state['display'][0] != display[0]:
+        lcd_updated = True
         display[0] = state['display'][0]
         modules[1].update(state['display'][0],0)
+
+    # hack because 2 consecutive lcd messages can break screen
+    modules[0].update(state['knob1_leds'], state['knob2_leds'], state['but1_led'], state['but2_led'])
+
     if state['display'][1] != display[1]:
         display[1] = state['display'][1]
         modules[1].update(state['display'][1],1)
+    initial_state.write(state)
 
-store.dispatch(actions.init(initial_state))
+store.dispatch(actions.init(initial_state.read()))
 store.subscribe(partial(handle_changes))
 
 while True:
