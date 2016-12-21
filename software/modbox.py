@@ -99,6 +99,11 @@ def handle_changes():
         modules[1].update(state['display'][1],1)
     initial_state.write(state)
 
+    if state['change_playback'] is not False:
+        store.dispatch(actions.change_playback(state))
+        
+        
+
 store.dispatch(actions.init(initial_state.read()))
 store.subscribe(partial(handle_changes))
 

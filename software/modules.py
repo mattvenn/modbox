@@ -24,7 +24,7 @@ class Module(object):
     def register(self):
         log.info("registering module %s with id %d" % (self.__class__.__name__, self.id))
         reg_msg = struct.pack("<BB", self.id, self.get_modchange_msglen())
-        log.info("reg msg = [%s]" % reg_msg.encode('hex'))
+        log.debug("reg msg = [%s]" % reg_msg.encode('hex'))
         stat, mid = self.mqtt_client.publish("/modbox/register", reg_msg, qos=2)
 
     def post_register(self):
@@ -133,13 +133,6 @@ class Knobs(Module):
         self.send_setmod(bytearray(setmod_msg))
 
 class LCD(Module):
-#    def __init__(self, id, mqtt_client):
-#        super(LCD, self).__init__(id, mqtt_client)
-
-    def post_register(self):
-        lcd_msg = "knob 1    knob 2"
-        setmod_msg = struct.pack("<BB16s", self.id, 0, lcd_msg.ljust(16))
-        self.send_setmod(bytearray(setmod_msg))
 
     def get_modchange_msglen(self):
         return 0
