@@ -7,14 +7,14 @@ import logging
 log = logging.getLogger(__name__)
 
 from functools import partial
-from initial_state import mainmenu_items, playback_items, addmenu_items
+from initial_state import mainmenu_items, playback_items
 
 def display_vol(volume):
     return "%d" % volume
 def display_playback_opts(menu_id):
     return playback_items[menu_id]
-def display_add_opts(menu_id):
-    return addmenu_items[menu_id]
+def display_add_opts(state):
+    return state['add_menu_items'][state['add_menu_id']]
 
 def get_bar(num, maxn=100, fill=True, num_leds=7):
     div = float(maxn / num_leds)
@@ -28,7 +28,7 @@ def get_bar(num, maxn=100, fill=True, num_leds=7):
                 bar = 1 << i
     return bar
 
-def reduce_knob(knob, options, reducer=10):
+def reduce_knob(knob, options, reducer=5):
     if knob < 0:
         knob = (reducer * len(options) - 1)
     elif knob > (reducer * len(options) - 1):
@@ -45,11 +45,6 @@ class Reducers():
         log.debug("battery = %s" % value)
         return state.copy(battery = value)
 
-    def change_playback(self, state, value):
-        # how to do async stuff?
-        log.info("playback changed")
-        display = [state['display'][0],"done"]
-        return state.copy(change_playback = False, display = display)
         
     def but1_press(self, state, value):
         return state
@@ -68,13 +63,13 @@ class Reducers():
 
     def but2_release(self, state, value):
         if state['mainmenu_id'] == mainmenu_items.index('add'):
-            log.info("adding %s" % addmenu_items[state['add_menu_id']])
+            log.info("adding %s" % display_add_opts(state))
             display = [state['display'][0],"adding..."]
-            return state.copy(but2_led = True, display = display, change_playback = state['add_menu_id'])
+            return state.copy(but2_led = True, display = display, change_playlist = True)
         if state['mainmenu_id'] == mainmenu_items.index('playback'):
             display = [state['display'][0],"done"]
             log.info("changing play state to %s" % playback_items[state['playback_menu_id']])
-            return state.copy(but2_led = True, display = display)
+            return state.copy(but2_led = True, display = display, change_playback = True)
         return state
 
     def change_knob1(self, state, value):
@@ -96,9 +91,12 @@ class Reducers():
             knob2_leds = get_bar(state['volume'], 100)
 
         elif mainmenu_id == mainmenu_items.index('add'):
-            display[1] = display_add_opts(state['add_menu_id'])
-            knob2_leds = get_bar(10 * state['add_menu_id'], 10 * len(addmenu_items), fill=False)
+            display[1] = display_add_opts(state)
+            knob2_leds = get_bar(10 * state['add_menu_id'], 10 * len(state['add_menu_items']), fill=False)
             but2_led = True
+
+        elif mainmenu_id == mainmenu_items.index('now playing'):
+            display[1] = state['now_playing']
 
         elif mainmenu_id == mainmenu_items.index('battery'):
             display[1] = "ADC = %s" % state['battery']
@@ -114,7 +112,7 @@ class Reducers():
                 volume = 0
             display = [state['display'][0], display_vol(volume)]
             knob2_leds = get_bar(volume, 100)
-            return state.copy(volume = volume, display = display, knob2_leds = knob2_leds)
+            return state.copy(change_volume = True, volume = volume, display = display, knob2_leds = knob2_leds)
 
         elif state['mainmenu_id'] == mainmenu_items.index('playback'): 
             playback_menu_knob, playback_menu_id = reduce_knob(state['playback_menu_knob'] + value, playback_items)
@@ -123,12 +121,24 @@ class Reducers():
             return state.copy(display = display, playback_menu_knob = playback_menu_knob, playback_menu_id = playback_menu_id, knob2_leds = knob2_leds)
 
         elif state['mainmenu_id'] == mainmenu_items.index('add'): 
-            add_menu_knob, add_menu_id = reduce_knob(state['add_menu_knob'] + value, addmenu_items)
-            display = [state['display'][0], display_add_opts(add_menu_id)]
-            knob2_leds = get_bar(10 * add_menu_id, 10 * len(addmenu_items), fill=False)
+            add_menu_knob, add_menu_id = reduce_knob(state['add_menu_knob'] + value, state['add_menu_items'])
+            display = [state['display'][0], display_add_opts(state)]
+            knob2_leds = get_bar(10 * add_menu_id, 10 * len(state['add_menu_items']), fill=False)
             return state.copy(display = display, add_menu_knob = add_menu_knob, add_menu_id = add_menu_id, knob2_leds = knob2_leds)
 
         return state
+    
+    def volume_changed(self, state, value):
+        return state.copy(change_volume = False)
+
+    def playlist_changed(self, state, value):
+        display = [state['display'][0],"%s" % value]
+        return state.copy(change_playlist = False, display = display, now_playing = value)
+
+    def playback_changed(self, state, value):
+        log.info("playback changed")
+        display = [state['display'][0],"state = %s" % value]
+        return state.copy(change_playback = False, display = display)
 
 def make_action_method(name):
     '''Returns a method that returns a dict to be passed to dispatch'''

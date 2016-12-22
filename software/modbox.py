@@ -9,6 +9,10 @@ import initial_state #import read, write
 from store import store
 from actions import actions
 from functools import partial
+from initial_state import playback_items
+
+from mpd import MPDClient, ProtocolError, ConnectionError
+import random
 
 import logging
 
@@ -23,6 +27,7 @@ ch = logging.StreamHandler()
 # create formatter for console
 ch.setFormatter(log_format)
 log.addHandler(ch)
+
 
 def on_connect(client, userdata, flags, rc):
     log.info("Connected with result code "+str(rc))
@@ -76,6 +81,7 @@ for module in config:
     elif module['type'] == 'lcd':
         modules.append(LCD(module['id'], client))
 
+
 client.connect("127.0.0.1", 1883, 60)
 time.sleep(0.1)
 client.subscribe("/modbox/start")  # when modbox starts, this will cause all modules to be registered
@@ -83,10 +89,18 @@ client.subscribe("/modbox/modchange") # whenever a control changes
 client.subscribe("/modbox/battery") # whenever a control changes
 client.loop_start()
 
+# mpd client
+mpdclient = MPDClient()
+mpdclient.connect("192.168.1.241", 6600)  
+playlists = [pl['playlist'] for pl in mpdclient.listplaylists()] 
+
+store.dispatch(actions.init(initial_state.read(playlists)))
+
 # force a reset
 client.publish("/modbox/reset", "", qos=2)
 
 display = ['','']
+
 def handle_changes(force_update = False):
     state = store.get_state()
     log.debug(state)
@@ -105,13 +119,60 @@ def handle_changes(force_update = False):
         modules[1].update(state['display'][1],1)
     initial_state.write(state)
 
-    if state['change_playback'] is not False:
-        store.dispatch(actions.change_playback(state))
+    if state['change_playback']:
+        if playback_items[state['playback_menu_id']] == 'clear':
+            mpdclient.clear()
+        if playback_items[state['playback_menu_id']] == 'stop':
+            mpdclient.stop()
+        if playback_items[state['playback_menu_id']] == 'play':
+            mpdclient.play()
+        if playback_items[state['playback_menu_id']] == 'skip':
+            mpdclient.next()
+        #print(client.next()) # print result of the command "find any house"
+        store.dispatch(actions.playback_changed(mpdclient.status()['state']))
         
+    if state['change_playlist']:
+        mpdclient.clear()
+        if state['add_menu_items'][state['add_menu_id']] == 'random album':
+            try:
+                albums = mpdclient.list('album')
+                log.debug("found %d albums" % len(albums))
+                album = random.choice(albums)
+                log.info("adding random album %s" % album)
+                mpdclient.findadd('album', album)
+            except ProtocolError:
+                log.warning("mpd protocol error")
+                pass
+
+        else:
+            playlist_name = state['add_menu_items'][state['add_menu_id']] 
+            log.info("adding %s" % playlist_name)
+            mpdclient.load(playlist_name)
+
+        mpdclient.play()
+
+        try:
+            currently_playing = mpdclient.currentsong()['album']
+        except KeyError:
+            currently_playing = 'no playlist'
+
+        store.dispatch(actions.playlist_changed(currently_playing))
+
+    if state['change_volume']:
+        mpdclient.setvol(state['volume'])
+        store.dispatch(actions.volume_changed())
+       
         
 
-store.dispatch(actions.init(initial_state.read()))
 store.subscribe(partial(handle_changes))
 
 while True:
-	time.sleep(0.5)
+    time.sleep(0.5)
+    try:
+        mpdclient.ping()
+    except ProtocolError as e:
+        log.warning("mpd protocol error after ping: %s" % e)
+        pass
+    except ConnectionError:
+        mpdclient.connect("192.168.1.241", 6600)  
+
