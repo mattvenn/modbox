@@ -39,7 +39,7 @@ MODULE * modules;
 #define TICK 5000
 #define SHUTDOWN 10000
 unsigned long last_tick = 0;
-#define I2C_CHECK 20
+#define I2C_CHECK 50
 unsigned long last_i2c_check = 0;
 
 #define DEBUG_MQTT
