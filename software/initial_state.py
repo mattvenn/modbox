@@ -4,7 +4,7 @@ import pickle
 import logging
 log = logging.getLogger(__name__)
 
-mainmenu_items = [ 'now playing', 'volume', 'playback', 'add', 'battery']
+mainmenu_items = ['add', 'volume', 'playback', 'now playing', 'battery']
 playback_items = ['play', 'stop', 'clear', 'skip']
 
 

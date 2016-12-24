@@ -28,11 +28,17 @@ def get_bar(num, maxn=100, fill=True, num_leds=7):
                 bar = 1 << i
     return bar
 
-def reduce_knob(knob, options, reducer=5):
+def reduce_knob(knob, options, reducer=5, wrap=False):
     if knob < 0:
-        knob = (reducer * len(options) - 1)
+        if wrap:
+            knob = (reducer * len(options) - 1)
+        else:
+            knob = 0
     elif knob > (reducer * len(options) - 1):
-        knob = 0
+        if wrap:
+            knob = 0
+        else:
+            knob = (reducer * len(options) - 1)
     
     reduced = knob // reducer 
     return knob, reduced
@@ -44,7 +50,6 @@ class Reducers():
     def update_battery(self, state, value):
         log.debug("battery = %s" % value)
         return state.copy(battery = value)
-
         
     def but1_press(self, state, value):
         return state
@@ -75,7 +80,7 @@ class Reducers():
     def change_knob1(self, state, value):
         mainmenu_knob, mainmenu_id = reduce_knob(state['mainmenu_knob'] + value, mainmenu_items)
 
-        knob1_leds = get_bar(mainmenu_id * 10, 10 * len(mainmenu_items), fill=False)
+        knob1_leds = get_bar(mainmenu_id * 10, 10 * len(mainmenu_items), fill=False, num_leds=len(mainmenu_items))
         knob2_leds = 0
         but2_led = False
 
@@ -83,7 +88,7 @@ class Reducers():
 
         if mainmenu_id == mainmenu_items.index('playback'):
             display[1] = display_playback_opts(state['playback_menu_id'])
-            knob2_leds = get_bar(10 * state['playback_menu_id'], 10 * len(playback_items), fill=False)
+            knob2_leds = get_bar(10 * state['playback_menu_id'], 10 * len(playback_items), fill=False, num_leds=len(playback_items))
             but2_led = True
 
         elif mainmenu_id == mainmenu_items.index('volume'):
@@ -92,14 +97,14 @@ class Reducers():
 
         elif mainmenu_id == mainmenu_items.index('add'):
             display[1] = display_add_opts(state)
-            knob2_leds = get_bar(10 * state['add_menu_id'], 10 * len(state['add_menu_items']), fill=False)
+            knob2_leds = get_bar(10 * state['add_menu_id'], 10 * len(state['add_menu_items']), fill=False, num_leds=len(state['add_menu_items']))
             but2_led = True
 
         elif mainmenu_id == mainmenu_items.index('now playing'):
             display[1] = state['now_playing']
 
         elif mainmenu_id == mainmenu_items.index('battery'):
-            display[1] = "ADC = %s" % state['battery']
+            display[1] = "%s V" % state['battery']
 
         return state.copy(display = display, mainmenu_id = mainmenu_id, mainmenu_knob = mainmenu_knob, knob1_leds = knob1_leds, knob2_leds = knob2_leds, but2_led = but2_led)
             
@@ -117,13 +122,13 @@ class Reducers():
         elif state['mainmenu_id'] == mainmenu_items.index('playback'): 
             playback_menu_knob, playback_menu_id = reduce_knob(state['playback_menu_knob'] + value, playback_items)
             display = [state['display'][0], display_playback_opts(playback_menu_id)]
-            knob2_leds = get_bar(10 * playback_menu_id, 10 * len(playback_items), fill=False)
+            knob2_leds = get_bar(10 * playback_menu_id, 10 * len(playback_items), fill=False, num_leds=len(playback_items))
             return state.copy(display = display, playback_menu_knob = playback_menu_knob, playback_menu_id = playback_menu_id, knob2_leds = knob2_leds)
 
         elif state['mainmenu_id'] == mainmenu_items.index('add'): 
             add_menu_knob, add_menu_id = reduce_knob(state['add_menu_knob'] + value, state['add_menu_items'])
             display = [state['display'][0], display_add_opts(state)]
-            knob2_leds = get_bar(10 * add_menu_id, 10 * len(state['add_menu_items']), fill=False)
+            knob2_leds = get_bar(10 * add_menu_id, 10 * len(state['add_menu_items']), fill=False, num_leds=len(state['add_menu_items']))
             return state.copy(display = display, add_menu_knob = add_menu_knob, add_menu_id = add_menu_id, knob2_leds = knob2_leds)
 
         return state

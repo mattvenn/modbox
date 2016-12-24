@@ -58,7 +58,12 @@ def on_message(client, userdata, message):
         else:
             print("no module with that id")
     elif message.topic == '/modbox/battery':
-        store.dispatch(actions.update_battery(message.payload))
+        v_in = int(message.payload) * 1.0 / 1023
+        R1 = 2400.0
+        R2 = 10000.0
+        batt_level = v_in / (R1 / (R1+R2))
+        batt_level = round(batt_level, 2)
+        store.dispatch(actions.update_battery(batt_level))
     else:
         print("no handler for that topic")
 
@@ -102,6 +107,12 @@ client.publish("/modbox/reset", "", qos=2)
 display = ['','']
 
 def handle_changes(force_update = False):
+    try:
+        mpdclient.ping()
+    except ConnectionError:
+        log.warning("reconnecting to mpd")
+        mpdclient.connect("192.168.1.241", 6600)  
+
     state = store.get_state()
     log.debug(state)
 
@@ -168,11 +179,3 @@ store.subscribe(partial(handle_changes))
 
 while True:
     time.sleep(0.5)
-    try:
-        mpdclient.ping()
-    except ProtocolError as e:
-        log.warning("mpd protocol error after ping: %s" % e)
-        pass
-    except ConnectionError:
-        mpdclient.connect("192.168.1.241", 6600)  
-
