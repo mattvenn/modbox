@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import paho.mqtt.client as mqtt
 from modules import Button, Knobs, LCD
+import socket # for error handling
 import struct
 import json
 import time
@@ -95,8 +96,15 @@ client.subscribe("/modbox/battery") # whenever a control changes
 client.loop_start()
 
 # mpd client
-mpdclient = MPDClient()
-mpdclient.connect("192.168.1.241", 6600)  
+mpdclient = None
+
+def connect_mpd():
+    global mpdclient
+    mpdclient = MPDClient()
+    mpdclient.connect("192.168.1.241", 6600)  
+
+connect_mpd()
+
 playlists = [pl['playlist'] for pl in mpdclient.listplaylists()] 
 
 store.dispatch(actions.init(initial_state.read(playlists)))
@@ -110,8 +118,11 @@ def handle_changes(force_update = False):
     try:
         mpdclient.ping()
     except ConnectionError:
-        log.warning("reconnecting to mpd")
-        mpdclient.connect("192.168.1.241", 6600)  
+        log.warning("mpd connection error")
+        connect_mpd()
+    except socket.error:
+        log.warning("socket error: reconnecting to mpd")
+        connect_mpd()
 
     state = store.get_state()
     log.debug(state)
