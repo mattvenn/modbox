@@ -2,6 +2,7 @@
 import paho.mqtt.client as mqtt
 from modules import Button, Knobs, LCD
 import socket # for error handling
+import fiplistener
 import struct
 import json
 import time
@@ -11,6 +12,7 @@ from store import store
 from actions import actions
 from functools import partial
 from initial_state import playback_items
+from threading import Thread
 
 from mpd import MPDClient, ProtocolError, ConnectionError
 import random
@@ -184,9 +186,12 @@ def handle_changes(force_update = False):
         mpdclient.setvol(state['volume'])
         store.dispatch(actions.volume_changed())
        
-        
 
 store.subscribe(partial(handle_changes))
+
+fip_thread = Thread(target=fiplistener.start_listener)
+fip_thread.setDaemon(True)
+fip_thread.start()
 
 while True:
     time.sleep(0.5)

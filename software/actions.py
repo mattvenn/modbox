@@ -47,6 +47,9 @@ class Reducers():
     def init(self, _, state):
         return state
 
+    def update_now_playing(self, state, value):
+        return state.copy(now_playing = value);
+
     def update_battery(self, state, value):
         log.debug("battery = %s" % value)
         return state.copy(battery = value)
