@@ -1,0 +1,4 @@
+pydux
+frozendict
+python-mpd2
+tweepy
