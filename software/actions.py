@@ -134,6 +134,12 @@ class Reducers():
             knob2_leds = get_bar(10 * add_menu_id, 10 * len(state['add_menu_items']), fill=False, num_leds=len(state['add_menu_items']))
             return state.copy(display = display, add_menu_knob = add_menu_knob, add_menu_id = add_menu_id, knob2_leds = knob2_leds)
 
+        elif state['mainmenu_id'] == mainmenu_items.index('now playing'):
+            now_playing_knob, now_playing_char= reduce_knob(state['now_playing_knob'] + value, state['now_playing'])
+            now_playing = state['now_playing'][now_playing_char:]
+            display = [state['display'][0], now_playing]
+            return state.copy(display = display, now_playing_knob = now_playing_knob, now_playing_char= now_playing_char)
+
         return state
     
     def volume_changed(self, state, value):

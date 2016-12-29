@@ -28,6 +28,8 @@ def get_initial_state(playlists):
         'change_playlist' : False,
 
         'now_playing' : '',
+        'now_playing_knob' : 0,
+        'now_playing_char' : 0,
 
         'display' : ['modbox', ''],
         'knob1_leds' : 0,

@@ -17,7 +17,7 @@ class FIPListener(tweepy.StreamListener):
         data = json.loads(data)
         m = re.search(r'#nowplaying (.*) https:', data['text'])
         if m is not None:
-            now_playing = m.group(1).encode('utf-8')
+            now_playing = m.group(1).encode('utf-8').lower()
             log.info("update: %s" % now_playing)
             store.dispatch(actions.update_now_playing(now_playing))
 
@@ -36,7 +36,7 @@ def start_listener():
     fipListener = FIPListener()
     fipStream = tweepy.Stream(auth = api.auth, listener=fipListener)
     log.info("starting fip twitter stream")
-    fipStream.filter(follow=[2211149702])
+    fipStream.filter(follow=['2211149702'])
 
 if __name__ == '__main__':
     start_listener()
