@@ -1,0 +1,9 @@
+[Unit]
+Description=modbox
+
+[Service]
+WorkingDirectory=/home/pi/modbox/software/
+ExecStart=/home/pi/modbox/software/modbox.py
+
+[Install]
+WantedBy=multi-user.target
