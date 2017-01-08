@@ -19,7 +19,7 @@ import random
 
 import logging
 
-log_format = logging.Formatter('%(asctime)s - %(name)-16s - %(levelname)-8s - %(message)s')
+log_format = logging.Formatter('%(name)-10s - %(levelname)-8s - %(message)s')
 # configure the client logging
 log = logging.getLogger('')
 # has to be set to debug as is the root logger
@@ -108,6 +108,7 @@ def connect_mpd():
 connect_mpd()
 
 playlists = [pl['playlist'] for pl in mpdclient.listplaylists()] 
+log.info("playlists = %s" % playlists)
 
 store.dispatch(actions.init(initial_state.read(playlists)))
 
@@ -156,6 +157,7 @@ def handle_changes(force_update = False):
         store.dispatch(actions.playback_changed(mpdclient.status()['state']))
         
     if state['change_playlist']:
+        currently_playing = "no playlist"
         mpdclient.clear()
         if state['add_menu_items'][state['add_menu_id']] == 'random album':
             try:
@@ -164,6 +166,10 @@ def handle_changes(force_update = False):
                 album = random.choice(albums)
                 log.info("adding random album %s" % album)
                 mpdclient.findadd('album', album)
+                mpdclient.play()
+
+                currently_playing = mpdclient.currentsong()['album']
+                currently_playing += ", " + mpdclient.currentsong()['artist']
             except ProtocolError:
                 log.warning("mpd protocol error")
                 pass
@@ -171,14 +177,9 @@ def handle_changes(force_update = False):
         else:
             playlist_name = state['add_menu_items'][state['add_menu_id']] 
             log.info("adding %s" % playlist_name)
+            currently_playing = playlist_name
             mpdclient.load(playlist_name)
-
-        mpdclient.play()
-
-        try:
-            currently_playing = mpdclient.currentsong()['album']
-        except KeyError:
-            currently_playing = 'no playlist'
+            mpdclient.play()
 
         store.dispatch(actions.playlist_changed(currently_playing))
 

@@ -47,8 +47,12 @@ class Reducers():
     def init(self, _, state):
         return state
 
+    # only thing that calls this is fip, so only do something if fip is playing
     def update_now_playing(self, state, value):
-        return state.copy(now_playing = value);
+        if state['playlist_selected']  == state['add_menu_items'].index('fip'):
+            log.info("updating now playing")
+            return state.copy(now_playing = value, now_playing_knob = 0);
+        return state
 
     def update_battery(self, state, value):
         log.debug("battery = %s" % value)
@@ -73,7 +77,7 @@ class Reducers():
         if state['mainmenu_id'] == mainmenu_items.index('add'):
             log.info("adding %s" % display_add_opts(state))
             display = [state['display'][0],"adding..."]
-            return state.copy(but2_led = True, display = display, change_playlist = True)
+            return state.copy(but2_led = True, display = display, change_playlist = True, playlist_selected = state['add_menu_id'])
         if state['mainmenu_id'] == mainmenu_items.index('playback'):
             display = [state['display'][0],"done"]
             log.info("changing play state to %s" % playback_items[state['playback_menu_id']])
@@ -109,7 +113,7 @@ class Reducers():
         elif mainmenu_id == mainmenu_items.index('battery'):
             display[1] = "%s V" % state['battery']
 
-        return state.copy(display = display, mainmenu_id = mainmenu_id, mainmenu_knob = mainmenu_knob, knob1_leds = knob1_leds, knob2_leds = knob2_leds, but2_led = but2_led)
+        return state.copy(display = display, mainmenu_id = mainmenu_id, mainmenu_knob = mainmenu_knob, knob1_leds = knob1_leds, knob2_leds = knob2_leds, but2_led = but2_led, now_playing_knob = 0)
             
     def change_knob2(self, state, value):
         if state['mainmenu_id'] == mainmenu_items.index('volume'): 
@@ -135,10 +139,10 @@ class Reducers():
             return state.copy(display = display, add_menu_knob = add_menu_knob, add_menu_id = add_menu_id, knob2_leds = knob2_leds)
 
         elif state['mainmenu_id'] == mainmenu_items.index('now playing'):
-            now_playing_knob, now_playing_char= reduce_knob(state['now_playing_knob'] + value, state['now_playing'])
+            now_playing_knob, now_playing_char= reduce_knob(state['now_playing_knob'] + value, state['now_playing'], reducer=2)
             now_playing = state['now_playing'][now_playing_char:]
             display = [state['display'][0], now_playing]
-            return state.copy(display = display, now_playing_knob = now_playing_knob, now_playing_char= now_playing_char)
+            return state.copy(display = display, now_playing_knob = now_playing_knob, now_playing_char = now_playing_char)
 
         return state
     

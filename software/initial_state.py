@@ -27,6 +27,7 @@ def get_initial_state(playlists):
         'change_volume' : False,
         'change_playlist' : False,
 
+        'playlist_selected' : 0,
         'now_playing' : '',
         'now_playing_knob' : 0,
         'now_playing_char' : 0,
@@ -43,15 +44,16 @@ def get_initial_state(playlists):
 
 state_file = 'state.pkl'
 
-def read(mpdclient):
+def read(playlists):
     log.debug('reading initial state')
     try:
         with open(state_file) as fh:
             state = pickle.load(fh)
+            state['add_menu_items'] = playlists
             return state
     except:
         log.debug('error reading state file, using hard-coded initial state')
-        return get_initial_state(mpdclient)
+        return get_initial_state(playlists)
 
 
 def write(state):
