@@ -2,3 +2,4 @@ pydux
 frozendict
 python-mpd2
 tweepy
+paho-mqtt
